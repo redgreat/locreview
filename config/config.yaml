@@ -1,0 +1,39 @@
+COMMON: &common #标识
+  DATABASES:
+    TI_GOOGLE:
+      host: gateway01.ap-northeast-1.prod.aws.tidbcloud.com
+      port: 4000
+      database: dailywong
+      user: 2VGr71AdbLZb9Ms.root
+      password: Mm19890425
+      ssl_ca: /etc/ssl/cert.pem
+      ssl_cert: /etc/ssl/certs
+
+    TI_MSN:
+      host: gateway01.us-east-1.prod.aws.tidbcloud.com
+      port: 4000
+      database: test
+      user: s49scd8yqRkHgCX.root
+      password: 535nVmA4KIVVMTAT
+      ssl_ca: /etc/ssl/cert.pem
+      ssl_cert: /etc/ssl/certs
+
+    DB_TASK:
+      host: pc-bp1zip05gl1b1ga3veo.rwlb.rds.aliyuncs.com
+      port: 3306
+      database: zr_dcg_task
+      user: user_dcg
+      password: Lunz2017
+
+  JSAPI_KEY: 8ed6fc7322bad71471c034af8b681cb6
+  JSAPI_SEC: 641af2cc3789991d5408e3429e29bb11
+
+DEVELOPMENT: &development
+  <<: *common # 继承common，没有重新定义的变量，使用common变量值
+  DEBUG: True
+
+STAGING: &staging
+  <<: *common
+
+PRODUCTION: &production
+  <<: *common

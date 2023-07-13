@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>高德地图轨迹回放</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode:'{{ js_api_sec }}',
+        }
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key={{ js_api_key }}"></script>
+    <script src="https://webapi.amap.com/ui/1.1/main.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        #map {
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label>开始时间：</label>
+        <input type="datetime-local" id="start_time">
+        <label>结束时间：</label>
+        <input type="datetime-local" id="end_time">
+        <label>设备号：</label>
+        <select id="device_id">
+            {% for device in devices %}
+                <option value="{{ device }}">{{ device }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="getData()">查询</button>
+    </div>
+    <div>
+        <input type="range" id="progress" value="0" min="0" max="100">
+        <button onclick="togglePlay()">播放/暂停</button>
+        <button onclick="reset()">重置</button>
+        <span id="speed">1x</span>
+        <button onclick="changeSpeed(0.5)">减速</button>
+        <button onclick="changeSpeed(2)">加速</button>
+    </div>
+    <div id="map"></div>
+    <script>
+        if(typeof AMap === 'undefined') {
+          console.error('无法加载高德地图API');
+        } else {
+          console.log('高德地图API已加载');
+        }
+
+        if(typeof jQuery === 'undefined') {
+          console.error('无法加载jQuery库');
+        } else {
+          console.log('jQuery库已加载');
+        }
+
+        var map = new AMap.Map('map', {
+            zoom: 15,
+            resizeEnable: true,
+            center: [120.46077, 36.16986]
+        });
+
+        if(typeof map === 'undefined') {
+          console.error('无法创建地图对象');
+        } else {
+          console.log('地图对象已创建');
+        }
+
+        var marker = new AMap.Marker({
+            icon: "https://a.amap.com/jsapi_demos/static/demo-center-v2/car.png",
+            offset: new AMap.Pixel(-13, -26),
+            autoRotation: true
+        });
+
+        if(typeof marker === 'undefined') {
+          console.error('无法创建标记对象');
+        } else {
+          console.log('标记对象已创建');
+        }
+
+        var line = new AMap.Polyline({
+            strokeColor: "#ff0000",
+            strokeWeight: 2,
+            strokeStyle: "solid",
+            strokeOpacity: 1,
+            zIndex: 50
+        });
+
+        if(typeof line === 'undefined') {
+          console.error('无法创建折线对象');
+        } else {
+          console.log('折线对象已创建');
+        }
+
+        var data = [];
+        var currentIndex = 0;
+        var interval = null;
+        var playing = false;
+        var speed = 1;
+        var dataLength = 0;
+        function getData() {
+            var device_id = $('#device_id').val();
+            var start_time = $('#start_time').val();
+            var end_time = $('#end_time').val();
+            $.ajax({
+                url: '/api/locations?device_id=' + device_id + '&start_time=' + start_time + '&end_time=' + end_time,
+                success: function(res) {
+                    data = res;
+                    dataLength = data.length;
+                    console.log('获取数据长度', dataLength);
+                    currentIndex = 0;
+                    reset();
+
+                    // 将地图中心设置为数据的第一个点
+                    var center = data[0];
+                    map.setCenter(center);
+                },
+                error: function(xhr, status, error) {
+                    console.error('获取数据失败', error);
+                    data = [];
+                    dataLength = 0;
+                }
+            });
+        }
+
+        function togglePlay() {
+            if (playing) {
+                playing = false;
+                clearInterval(interval);
+            } else {
+                playing = true;
+                // var duration = data[dataLength - 1][2] - data[0][2]; // 使用保存的数据长度
+                interval = setInterval(function() {
+                    if (currentIndex >= dataLength) { // 使用保存的数据长度
+                        clearInterval(interval);
+                        playing = false;
+                        return;
+                    }
+                    var item = data[currentIndex];
+                    marker.setPosition(item);
+                    map.setCenter(item)
+                    line.setPath(data.slice(0, currentIndex + 1));
+                    currentIndex++;
+                }, 10 / speed);
+            }
+        }
+        function reset() {
+            clearInterval(interval);
+            playing = false;
+            currentIndex = 0;
+            marker.setMap(null);
+            line.setMap(null);
+            marker.setMap(map);
+            line.setMap(map);
+            marker.setPosition(data[0]);
+            line.setPath([data[0]]);
+            map.setCenter(data[0]);
+            $('#progress').val(0);
+        }
+        function changeSpeed(s) {
+            speed = s;
+            $('#speed').text(speed + 'x');
+            if (playing) {
+                togglePlay();
+            }
+        }
+    </script>
+</body>
+</html>
